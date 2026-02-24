@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import api from '@/services/api';
 import Navbar from '@/components/Navbar';
 
 export default function ForgotPasswordPage() {
@@ -20,7 +20,7 @@ export default function ForgotPasswordPage() {
     setMessage('');
 
     try {
-      const response = await axios.post('/api/password-reset/request', {
+      const response = await api.post('/password-reset/request', {
         registeredEmail,
         recoveryEmail,
       });

@@ -50,9 +50,11 @@ public class AuthController {
             
             AuthResponse response = new AuthResponse(
                 token,
+                savedUser.getId(),
                 savedUser.getEmail(),
                 savedUser.getName(),
-                savedUser.getRole().name()
+                savedUser.getRole().name(),
+                savedUser.getRecoveryEmail()
             );
             
             return ResponseEntity.ok(response);
@@ -80,9 +82,11 @@ public class AuthController {
             
             AuthResponse response = new AuthResponse(
                 token,
+                user.getId(),
                 user.getEmail(),
                 user.getName(),
-                user.getRole().name()
+                user.getRole().name(),
+                user.getRecoveryEmail()
             );
             
             return ResponseEntity.ok(response);

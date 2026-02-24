@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import axios from 'axios';
+import api from '@/services/api';
 import Navbar from '@/components/Navbar';
 
 export default function ResetPasswordPage() {
@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
 
     const validateToken = async () => {
       try {
-        const response = await axios.get(`/api/password-reset/validate/${token}`);
+        const response = await api.get(`/password-reset/validate/${token}`);
         if (response.data.valid) {
           setTokenValid(true);
         } else {
@@ -78,7 +78,7 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/password-reset/reset', {
+      const response = await api.post('/password-reset/reset', {
         token,
         newPassword,
       });
