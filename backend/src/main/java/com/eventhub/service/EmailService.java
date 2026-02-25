@@ -54,6 +54,11 @@ public class EmailService {
     
     private void sendEmail(String to, String subject, String text) {
         try {
+            if (sendGridApiKey == null || sendGridApiKey.isEmpty()) {
+                log.error("SendGrid API key is not configured!");
+                return;
+            }
+            
             Map<String, Object> mail = new HashMap<>();
             
             Map<String, String> from = new HashMap<>();
@@ -83,7 +88,10 @@ public class EmailService {
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + sendGridApiKey.trim());
+            String apiKey = sendGridApiKey != null ? sendGridApiKey.trim() : "";
+            if (!apiKey.isEmpty()) {
+                headers.set("Authorization", "Bearer " + apiKey);
+            }
             
             HttpEntity<String> request = new HttpEntity<>(objectMapper.writeValueAsString(mail), headers);
             restTemplate.postForObject("https://api.sendgrid.com/v3/mail/send", request, String.class);
