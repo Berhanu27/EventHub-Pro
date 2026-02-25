@@ -212,18 +212,19 @@ EventHub Pro/
 **Added:**
 - Forgot password functionality (users only)
 - Email-based password reset with secure tokens
-- Reset link expires after 1 hour
+- Reset link expires after 15 minutes
 - One-time use tokens
 - Admin accounts protected from password reset
 - "Forgot password?" link on login page
+- Real email sending via Gmail SMTP
 
 **New Pages:**
 - `/forgot-password` - Request reset link
 - `/reset-password?token=xxx` - Reset password with token
 
 **Setup Required:**
-- Configure email in `application.properties`
-- See `EMAIL_SETUP_GUIDE.md` for instructions
+- Configure Gmail SMTP credentials
+- See **[EMAIL_SETUP_GUIDE.md](EMAIL_SETUP_GUIDE.md)** for step-by-step instructions
 
 ### Version 2.0
 

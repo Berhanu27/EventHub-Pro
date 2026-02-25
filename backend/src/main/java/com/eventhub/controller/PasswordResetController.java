@@ -1,12 +1,14 @@
 package com.eventhub.controller;
 
 import com.eventhub.service.PasswordResetService;
+import com.eventhub.entity.PasswordReset;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -15,6 +17,7 @@ import java.util.Map;
 @Slf4j
 public class PasswordResetController {
     private final PasswordResetService passwordResetService;
+    private final com.eventhub.repository.PasswordResetRepository passwordResetRepository;
     
     @PostMapping("/request")
     public ResponseEntity<Map<String, String>> requestPasswordReset(
@@ -22,10 +25,13 @@ public class PasswordResetController {
             HttpServletRequest httpRequest) {
         try {
             log.info("Password reset request received: {}", request.keySet());
+            log.info("Request body: {}", request);
             
             String registeredEmail = request.get("registeredEmail");
             String recoveryEmail = request.get("recoveryEmail");
             String ipAddress = getClientIpAddress(httpRequest);
+            
+            log.info("Registered email: {}, Recovery email: {}, IP: {}", registeredEmail, recoveryEmail, ipAddress);
             
             if (registeredEmail == null || registeredEmail.isEmpty()) {
                 Map<String, String> response = new HashMap<>();
@@ -46,19 +52,53 @@ public class PasswordResetController {
             response.put("message", "If the account exists with matching recovery email, a reset link has been sent");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            log.error("Password reset error: {}", e.getMessage());
-            if (e.getMessage().contains("Too many reset requests")) {
+            log.error("Password reset error: {}", e.getMessage(), e);
+            if (e.getMessage() != null && e.getMessage().contains("Too many reset requests")) {
                 Map<String, String> response = new HashMap<>();
                 response.put("error", "Too many reset requests. Please try again in 1 hour");
                 return ResponseEntity.status(429).body(response);
             }
             Map<String, String> response = new HashMap<>();
-            response.put("error", e.getMessage());
+            response.put("error", e.getMessage() != null ? e.getMessage() : "An error occurred");
             return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
             log.error("Unexpected error in password reset", e);
             Map<String, String> response = new HashMap<>();
-            response.put("error", "An unexpected error occurred");
+            response.put("error", "An unexpected error occurred: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    @GetMapping("/test/latest-token")
+    public ResponseEntity<Map<String, String>> getLatestToken() {
+        try {
+            // Get the latest password reset token for testing
+            List<PasswordReset> allResets = passwordResetRepository.findAll();
+            if (allResets.isEmpty()) {
+                Map<String, String> response = new HashMap<>();
+                response.put("error", "No password reset tokens found");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            PasswordReset latest = allResets.stream()
+                    .max((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
+                    .orElse(null);
+            
+            if (latest == null) {
+                Map<String, String> response = new HashMap<>();
+                response.put("error", "No password reset tokens found");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("token", latest.getToken());
+            response.put("email", latest.getUser().getEmail());
+            response.put("expiresAt", latest.getExpiresAt().toString());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error getting latest token: {}", e.getMessage());
+            Map<String, String> response = new HashMap<>();
+            response.put("error", "An error occurred");
             return ResponseEntity.status(500).body(response);
         }
     }
