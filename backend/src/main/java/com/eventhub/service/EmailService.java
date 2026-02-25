@@ -83,7 +83,7 @@ public class EmailService {
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + sendGridApiKey);
+            headers.set("Authorization", "Bearer " + sendGridApiKey.trim());
             
             HttpEntity<String> request = new HttpEntity<>(objectMapper.writeValueAsString(mail), headers);
             restTemplate.postForObject("https://api.sendgrid.com/v3/mail/send", request, String.class);
