@@ -56,7 +56,9 @@ public class SecurityConfig {
             "http://localhost:3000", 
             "http://localhost:8080",
             "http://127.0.0.1:3000",
-            "http://127.0.0.1:8080"
+            "http://127.0.0.1:8080",
+            "https://eventhub-pro.vercel.app",
+            "https://*.vercel.app"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
