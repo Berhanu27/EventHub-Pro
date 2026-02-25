@@ -1,13 +1,17 @@
 package com.eventhub.service;
 
-import com.sendgrid.SendGrid;
-import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.Email;
-import com.sendgrid.helpers.mail.Content;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import lombok.extern.slf4j.Slf4j;
-import java.io.IOException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -19,106 +23,74 @@ public class EmailService {
     @Value("${sendgrid.from-email:noreply@eventhub.com}")
     private String fromEmail;
     
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    
     public void sendVerificationEmail(String email, String verificationLink, String emailType) {
-        try {
-            Mail mail = new Mail(
-                new Email(fromEmail),
-                "Verify your EventHub Pro " + emailType + " email",
-                new Email(email),
-                new Content("text/plain", "Click the link below to verify your " + emailType + " email:\n\n" + verificationLink)
-            );
-            
-            SendGrid sg = new SendGrid(sendGridApiKey);
-            com.sendgrid.helpers.mail.Request request = new com.sendgrid.helpers.mail.Request();
-            request.setMethod(com.sendgrid.helpers.mail.Method.POST);
-            request.setEndpoint("mail/send");
-            request.setBody(mail.build());
-            sg.api(request);
-            log.info("Verification email sent to: {}", email);
-        } catch (IOException e) {
-            log.warn("Failed to send verification email to {}: {}", email, e.getMessage());
-        }
+        sendEmail(email, "Verify your EventHub Pro " + emailType + " email", 
+            "Click the link below to verify your " + emailType + " email:\n\n" + verificationLink);
     }
     
     public void sendPasswordResetEmail(String recoveryEmail, String resetLink) {
-        try {
-            Mail mail = new Mail(
-                new Email(fromEmail),
-                "Reset your EventHub Pro password",
-                new Email(recoveryEmail),
-                new Content("text/plain", "Click the link below to reset your password:\n\n" + resetLink + "\n\nThis link expires in 15 minutes.")
-            );
-            
-            SendGrid sg = new SendGrid(sendGridApiKey);
-            com.sendgrid.helpers.mail.Request request = new com.sendgrid.helpers.mail.Request();
-            request.setMethod(com.sendgrid.helpers.mail.Method.POST);
-            request.setEndpoint("mail/send");
-            request.setBody(mail.build());
-            sg.api(request);
-            log.info("Password reset email sent to: {}", recoveryEmail);
-        } catch (IOException e) {
-            log.warn("Failed to send password reset email to {}: {}", recoveryEmail, e.getMessage());
-        }
+        sendEmail(recoveryEmail, "Reset your EventHub Pro password", 
+            "Click the link below to reset your password:\n\n" + resetLink + "\n\nThis link expires in 15 minutes.");
+        log.info("Password reset email sent to: {}", recoveryEmail);
     }
     
     public void sendPasswordChangedNotification(String loginEmail, String recoveryEmail) {
-        try {
-            Mail mail = new Mail(
-                new Email(fromEmail),
-                "Your password has been successfully changed",
-                new Email(loginEmail),
-                new Content("text/plain", "Your EventHub Pro password has been successfully changed. If you did not make this change, please contact support immediately.")
-            );
-            
-            SendGrid sg = new SendGrid(sendGridApiKey);
-            com.sendgrid.helpers.mail.Request request = new com.sendgrid.helpers.mail.Request();
-            request.setMethod(com.sendgrid.helpers.mail.Method.POST);
-            request.setEndpoint("mail/send");
-            request.setBody(mail.build());
-            sg.api(request);
-            log.info("Password changed notification sent to: {}", loginEmail);
-        } catch (IOException e) {
-            log.warn("Failed to send password changed notification to {}: {}", loginEmail, e.getMessage());
-        }
+        String message = "Your EventHub Pro password has been successfully changed. If you did not make this change, please contact support immediately.";
+        sendEmail(loginEmail, "Your password has been successfully changed", message);
+        log.info("Password changed notification sent to: {}", loginEmail);
         
-        try {
-            Mail mail = new Mail(
-                new Email(fromEmail),
-                "Your password has been successfully changed",
-                new Email(recoveryEmail),
-                new Content("text/plain", "Your EventHub Pro password has been successfully changed. If you did not make this change, please contact support immediately.")
-            );
-            
-            SendGrid sg = new SendGrid(sendGridApiKey);
-            com.sendgrid.helpers.mail.Request request = new com.sendgrid.helpers.mail.Request();
-            request.setMethod(com.sendgrid.helpers.mail.Method.POST);
-            request.setEndpoint("mail/send");
-            request.setBody(mail.build());
-            sg.api(request);
-            log.info("Password changed notification sent to recovery email: {}", recoveryEmail);
-        } catch (IOException e) {
-            log.warn("Failed to send password changed notification to recovery email {}: {}", recoveryEmail, e.getMessage());
-        }
+        sendEmail(recoveryEmail, "Your password has been successfully changed", message);
+        log.info("Password changed notification sent to recovery email: {}", recoveryEmail);
     }
     
     public void sendRecoveryEmailChangeNotification(String oldRecoveryEmail) {
+        sendEmail(oldRecoveryEmail, "Your recovery email has been changed", 
+            "Your EventHub Pro recovery email has been changed. If you did not make this change, please contact support immediately.");
+        log.info("Recovery email change notification sent to: {}", oldRecoveryEmail);
+    }
+    
+    private void sendEmail(String to, String subject, String text) {
         try {
-            Mail mail = new Mail(
-                new Email(fromEmail),
-                "Your recovery email has been changed",
-                new Email(oldRecoveryEmail),
-                new Content("text/plain", "Your EventHub Pro recovery email has been changed. If you did not make this change, please contact support immediately.")
-            );
+            Map<String, Object> mail = new HashMap<>();
             
-            SendGrid sg = new SendGrid(sendGridApiKey);
-            com.sendgrid.helpers.mail.Request request = new com.sendgrid.helpers.mail.Request();
-            request.setMethod(com.sendgrid.helpers.mail.Method.POST);
-            request.setEndpoint("mail/send");
-            request.setBody(mail.build());
-            sg.api(request);
-            log.info("Recovery email change notification sent to: {}", oldRecoveryEmail);
-        } catch (IOException e) {
-            log.warn("Failed to send recovery email change notification to {}: {}", oldRecoveryEmail, e.getMessage());
+            Map<String, String> from = new HashMap<>();
+            from.put("email", fromEmail);
+            mail.put("from", from);
+            
+            List<Map<String, Object>> personalizations = new ArrayList<>();
+            Map<String, Object> personalization = new HashMap<>();
+            
+            List<Map<String, String>> toList = new ArrayList<>();
+            Map<String, String> toEmail = new HashMap<>();
+            toEmail.put("email", to);
+            toList.add(toEmail);
+            personalization.put("to", toList);
+            personalizations.add(personalization);
+            
+            mail.put("personalizations", personalizations);
+            mail.put("subject", subject);
+            
+            List<Map<String, String>> content = new ArrayList<>();
+            Map<String, String> contentItem = new HashMap<>();
+            contentItem.put("type", "text/plain");
+            contentItem.put("value", text);
+            content.add(contentItem);
+            
+            mail.put("content", content);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + sendGridApiKey);
+            
+            HttpEntity<String> request = new HttpEntity<>(objectMapper.writeValueAsString(mail), headers);
+            restTemplate.postForObject("https://api.sendgrid.com/v3/mail/send", request, String.class);
+            
+            log.info("Email sent to: {}", to);
+        } catch (Exception e) {
+            log.warn("Failed to send email to {}: {}", to, e.getMessage());
         }
     }
 }
